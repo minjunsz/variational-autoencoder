@@ -46,11 +46,19 @@ class VAEOutput:
 
 class NaiveVAE(pl.LightningModule):
     def __init__(
-        self, in_channels: int, hidden_dim: List[int], latent_dim: int, **kwargs
+        self,
+        in_channels: int,
+        hidden_dim: List[int],
+        latent_dim: int,
+        lr: float = 5e-4,
+        **kwargs
     ) -> None:
         super().__init__()
-        self.example_input_array = torch.Tensor(32, 1, 28, 28)
+        self.save_hyperparameters()
+        self.example_input_array = torch.Tensor(32, 1, 32, 32)
+
         self.latent_dim = latent_dim
+        self.lr = lr
         self.last_hidden_dim = hidden_dim[-1]
 
         hidden_dim_copy = [*hidden_dim]
@@ -121,7 +129,7 @@ class NaiveVAE(pl.LightningModule):
             (
                 -0.5
                 - output.logSigma
-                + (torch.exp(2 * output.logSigma) + output.mu ** 2) / 2
+                + (torch.exp(2 * output.logSigma) + output.mu**2) / 2
             )
             .sum(dim=1)
             .mean(dim=0)
@@ -148,6 +156,17 @@ class NaiveVAE(pl.LightningModule):
         output = self.forward(x)
         recon_loss, kld_loss = self.loss_function(x, output)
 
+        if batch_idx == 0:
+            tensorboard = self.logger.experiment
+            original = x[0]
+            recons = output.reconstructed[0]
+            tensorboard.add_image(
+                "val_original", original, global_step=self.current_epoch
+            )
+            tensorboard.add_image(
+                "val_reconstructed", recons, global_step=self.current_epoch
+            )
+
         log_values = {
             "val_total_loss": recon_loss.detach() + kld_loss.detach(),
             "val_reconstruction_loss": recon_loss.detach(),
@@ -161,6 +180,17 @@ class NaiveVAE(pl.LightningModule):
         output = self.forward(x)
         recon_loss, kld_loss = self.loss_function(x, output)
 
+        if batch_idx == 0:
+            tensorboard = self.logger.experiment
+            original = x[0]
+            recons = output.reconstructed[0]
+            tensorboard.add_image(
+                "test_original", original, global_step=self.current_epoch
+            )
+            tensorboard.add_image(
+                "test_reconstructed", recons, global_step=self.current_epoch
+            )
+
         log_values = {
             "test_total_loss": recon_loss.detach() + kld_loss.detach(),
             "test_reconstruction_loss": recon_loss.detach(),
@@ -169,7 +199,7 @@ class NaiveVAE(pl.LightningModule):
         self.log_dict(log_values)
 
     def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=0.001)
+        return torch.optim.Adam(self.parameters(), lr=self.lr)
 
     def reconstruct_img(self, original: torch.Tensor) -> torch.Tensor:
         """
