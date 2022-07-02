@@ -8,6 +8,7 @@ import torch
 import torch.nn.functional as F
 from pytorch_lightning.utilities.types import STEP_OUTPUT
 from torch import nn
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 from .types import TorchDevice, TorchTensor
 
@@ -129,7 +130,7 @@ class NaiveVAE(pl.LightningModule):
             (
                 -0.5
                 - output.logSigma
-                + (torch.exp(2 * output.logSigma) + output.mu**2) / 2
+                + 0.5 * ((2 * output.logSigma).exp() + output.mu**2)
             )
             .sum(dim=1)
             .mean(dim=0)
@@ -140,6 +141,7 @@ class NaiveVAE(pl.LightningModule):
         x, y = batch
         output = self.forward(x)
         recon_loss, kld_loss = self.loss_function(x, output)
+        scheduler = self.lr_schedulers()
 
         log_values = {
             "train_total_loss": recon_loss.detach() + kld_loss.detach(),
@@ -147,6 +149,7 @@ class NaiveVAE(pl.LightningModule):
             "train_KL_divergence": kld_loss.detach(),
         }
         self.log_dict(log_values)
+        scheduler.step(recon_loss.detach() + kld_loss.detach())
 
         return {"loss": recon_loss + kld_loss}
 
@@ -199,7 +202,14 @@ class NaiveVAE(pl.LightningModule):
         self.log_dict(log_values)
 
     def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=self.lr)
+        optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
+        return {
+            "optimizer": optimizer,
+            "lr_scheduler": {
+                "scheduler": ReduceLROnPlateau(optimizer, "min"),
+                "monitor": "train_total_loss",
+            },
+        }
 
     def reconstruct_img(self, original: torch.Tensor) -> torch.Tensor:
         """
