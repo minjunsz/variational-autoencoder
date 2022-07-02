@@ -1,6 +1,6 @@
 # %%
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import Optional, Tuple
 
 import numpy as np
 import pytorch_lightning as pl
@@ -49,7 +49,7 @@ class NaiveVAE(pl.LightningModule):
     def __init__(
         self,
         in_channels: int,
-        hidden_dim: List[int],
+        hidden_dim: list[int],
         latent_dim: int,
         lr: float = 5e-4,
         **kwargs
@@ -160,15 +160,10 @@ class NaiveVAE(pl.LightningModule):
         recon_loss, kld_loss = self.loss_function(x, output)
 
         if batch_idx == 0:
-            tensorboard = self.logger.experiment
-            original = x[0]
-            recons = output.reconstructed[0]
-            tensorboard.add_image(
-                "val_original", original, global_step=self.current_epoch
-            )
-            tensorboard.add_image(
-                "val_reconstructed", recons, global_step=self.current_epoch
-            )
+            original = x[0:5]
+            recons = output.reconstructed[0:5]
+            self.logger.log_image(key="val_original", images=[original])
+            self.logger.log_image(key="val_reconstructed", images=[recons])
 
         log_values = {
             "val_total_loss": recon_loss.detach() + kld_loss.detach(),
@@ -184,15 +179,11 @@ class NaiveVAE(pl.LightningModule):
         recon_loss, kld_loss = self.loss_function(x, output)
 
         if batch_idx == 0:
-            tensorboard = self.logger.experiment
-            original = x[0]
-            recons = output.reconstructed[0]
-            tensorboard.add_image(
-                "test_original", original, global_step=self.current_epoch
-            )
-            tensorboard.add_image(
-                "test_reconstructed", recons, global_step=self.current_epoch
-            )
+            wandb_logger = self.logger.experiment
+            original = x[0:5]
+            recons = output.reconstructed[0:5]
+            self.logger.log_image(key="test_original", images=[original])
+            self.logger.log_image(key="test_reconstructed", images=[recons])
 
         log_values = {
             "test_total_loss": recon_loss.detach() + kld_loss.detach(),
