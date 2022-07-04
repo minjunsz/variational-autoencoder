@@ -11,7 +11,7 @@ from pytorch_lightning.utilities.types import STEP_OUTPUT
 from torch import nn
 from torch.optim.lr_scheduler import StepLR
 
-from .types import TorchDevice, TorchTensor
+from .types import TorchTensor
 
 
 # %%
@@ -151,13 +151,11 @@ class NaiveVAE(pl.LightningModule):
         x, y = batch
         output = self.forward(x)
         recon_loss, kld_loss = self.loss_function(x, output)
-        scheduler = self.lr_schedulers()
         total_loss = recon_loss + self.kl_weight * kld_loss
         log_values = {
             "train_total_loss": total_loss.detach(),
             "train_reconstruction_loss": recon_loss.detach(),
             "train_KL_divergence": kld_loss.detach(),
-            "learning_rate": scheduler.get_last_lr()[0],
         }
         self.log_dict(log_values)
 
