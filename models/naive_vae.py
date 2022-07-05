@@ -154,7 +154,6 @@ class NaiveVAE(pl.LightningModule):
             "train_total_loss": total_loss.detach(),
             "train_reconstruction_loss": recon_loss.detach(),
             "train_KL_divergence": kld_loss.detach(),
-            "learning_rate": scheduler.get_last_lr()[0],
         }
         self.log_dict(log_values)
 
