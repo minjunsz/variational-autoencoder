@@ -137,7 +137,7 @@ class NaiveVAE(pl.LightningModule):
             (
                 -0.5
                 - output.logSigma
-                + 0.5 * ((2 * output.logSigma).exp() + output.mu ** 2)
+                + 0.5 * ((2 * output.logSigma).exp() + output.mu**2)
             )
             .sum(dim=1)
             .mean(dim=0)
@@ -156,6 +156,7 @@ class NaiveVAE(pl.LightningModule):
         }
         self.log_dict(log_values)
 
+        scheduler = self.lr_schedulers()
         scheduler.step()
         return {"loss": total_loss}
 
@@ -195,7 +196,9 @@ class NaiveVAE(pl.LightningModule):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.hparams.lr)
         return {
             "optimizer": optimizer,
-            "lr_scheduler": {"scheduler": StepLR(optimizer, step_size=200, gamma=0.9),},
+            "lr_scheduler": {
+                "scheduler": StepLR(optimizer, step_size=200, gamma=0.9),
+            },
         }
 
     def reconstruct_img(self, original: TorchTensor) -> TorchTensor:
