@@ -58,9 +58,6 @@ class NaiveVAE(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters()
         self.example_input_array = torch.Tensor(32, 1, 32, 32)
-
-        self.latent_dim = latent_dim
-        self.lr = lr
         self.last_hidden_dim = hidden_dim[-1]
 
         hidden_dim_copy = [*hidden_dim]
@@ -140,7 +137,7 @@ class NaiveVAE(pl.LightningModule):
             (
                 -0.5
                 - output.logSigma
-                + 0.5 * ((2 * output.logSigma).exp() + output.mu**2)
+                + 0.5 * ((2 * output.logSigma).exp() + output.mu ** 2)
             )
             .sum(dim=1)
             .mean(dim=0)
@@ -159,8 +156,7 @@ class NaiveVAE(pl.LightningModule):
         }
         self.log_dict(log_values)
 
-        # scheduler.step()
-
+        scheduler.step()
         return {"loss": total_loss}
 
     def validation_step(self, batch, batch_idx: int) -> Optional[STEP_OUTPUT]:
@@ -170,20 +166,14 @@ class NaiveVAE(pl.LightningModule):
         recon_loss, kld_loss = self.loss_function(x, output)
         total_loss = recon_loss + self.kl_weight * kld_loss
 
-        if batch_idx == 0:
-            original = x[0:5]
-            recons = output.reconstructed[0:5]
-            gen = self.generate_img(5)
-            self.logger.log_image(key="val_original", images=[original])
-            self.logger.log_image(key="val_reconstructed", images=[recons])
-            self.logger.log_image(key="val_generated", images=[gen])
-
         log_values = {
             "val_total_loss": total_loss.detach(),
             "val_reconstruction_loss": recon_loss.detach(),
             "val_KL_divergence": kld_loss.detach(),
         }
         self.log_dict(log_values)
+
+        return {"input": x, "reconstructed": output.reconstructed}
 
     def test_step(self, batch, batch_idx: int) -> Optional[STEP_OUTPUT]:
         # this is the test loop
@@ -192,13 +182,6 @@ class NaiveVAE(pl.LightningModule):
         recon_loss, kld_loss = self.loss_function(x, output)
         total_loss = recon_loss + self.kl_weight * kld_loss
 
-        if batch_idx == 0:
-            wandb_logger = self.logger.experiment
-            original = x[0:5]
-            recons = output.reconstructed[0:5]
-            self.logger.log_image(key="test_original", images=[original])
-            self.logger.log_image(key="test_reconstructed", images=[recons])
-
         log_values = {
             "test_total_loss": total_loss.detach(),
             "test_reconstruction_loss": recon_loss.detach(),
@@ -206,13 +189,13 @@ class NaiveVAE(pl.LightningModule):
         }
         self.log_dict(log_values)
 
+        return {"input": x, "reconstructed": output.reconstructed}
+
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
+        optimizer = torch.optim.Adam(self.parameters(), lr=self.hparams.lr)
         return {
             "optimizer": optimizer,
-            "lr_scheduler": {
-                "scheduler": StepLR(optimizer, step_size=200, gamma=0.9),
-            },
+            "lr_scheduler": {"scheduler": StepLR(optimizer, step_size=200, gamma=0.9),},
         }
 
     def reconstruct_img(self, original: TorchTensor) -> TorchTensor:
@@ -222,12 +205,8 @@ class NaiveVAE(pl.LightningModule):
         """
         return self.forward(original).reconstructed
 
-    def generate_img(
-        self, num_imgs: int, device: Optional[TorchTensor] = None
-    ) -> TorchTensor:
-        latent = torch.randn(num_imgs, self.latent_dim)
-        if device is not None:
-            latent.to(device=device)
+    def generate_img(self, num_imgs: int) -> TorchTensor:
+        latent = torch.randn(num_imgs, self.hparams.latent_dim, device=self.device)
         return self.decode(latent)
 
 
