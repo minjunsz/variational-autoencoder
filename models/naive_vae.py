@@ -58,9 +58,6 @@ class NaiveVAE(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters()
         self.example_input_array = torch.Tensor(32, 1, 32, 32)
-
-        self.latent_dim = latent_dim
-        self.lr = lr
         self.last_hidden_dim = hidden_dim[-1]
 
         hidden_dim_copy = [*hidden_dim]
@@ -197,7 +194,7 @@ class NaiveVAE(pl.LightningModule):
         return {"input": x, "reconstructed": output.reconstructed}
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
+        optimizer = torch.optim.Adam(self.parameters(), lr=self.hparams.lr)
         return {
             "optimizer": optimizer,
             "lr_scheduler": {"scheduler": StepLR(optimizer, step_size=200, gamma=0.9),},
@@ -211,7 +208,7 @@ class NaiveVAE(pl.LightningModule):
         return self.forward(original).reconstructed
 
     def generate_img(self, num_imgs: int) -> TorchTensor:
-        latent = torch.randn(num_imgs, self.latent_dim, device=self.device)
+        latent = torch.randn(num_imgs, self.hparams.latent_dim, device=self.device)
         return self.decode(latent)
 
 
