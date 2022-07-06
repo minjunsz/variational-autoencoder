@@ -3,7 +3,6 @@
 from dataclasses import dataclass
 from typing import Optional, Tuple
 
-import numpy as np
 import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
@@ -123,6 +122,7 @@ class NaiveVAE(pl.LightningModule):
 
         return output
 
+    # pylint: disable=arguments-differ
     def forward(self, input: torch.Tensor) -> VAEOutput:
         mu, logSigma = self.encode(input)
         latent = reparametrization_trick(mu, logSigma)

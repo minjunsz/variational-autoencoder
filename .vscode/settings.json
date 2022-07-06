@@ -3,5 +3,6 @@
         "**/__pycache__": true,
         "**/.ipynb_checkpoints": true
     },
-    "python.formatting.provider": "black"
+    "python.formatting.provider": "black",
+    "python.linting.pylintPath": "/opt/conda/envs/VAE/bin/pylint"
 }
