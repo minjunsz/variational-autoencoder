@@ -1,1 +1,7 @@
-.ipynb_checkpoints
+**/.ipynb_checkpoints
+**/__pycache__
+
+downloads
+checkpoints
+wandb
+local_run.py
